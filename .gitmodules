@@ -1,0 +1,6 @@
+[submodule "marching-cubes"]
+	path = marching-cubes
+	url = https://github.com/GKOM-2022L-MarchingCubes/marching-cubes.git
+[submodule "visualizer"]
+	path = visualizer
+	url = https://github.com/GKOM-2022L-MarchingCubes/visualizer.git
