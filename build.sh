@@ -1,0 +1,1 @@
+cd visualizer & cargo build
