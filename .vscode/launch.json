@@ -11,7 +11,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["marching-cubes/4x4x4.json"],
+            "args": ["marching-cubes/2x2x2.json"],
         }
     ]
 }
