@@ -1,5 +1,5 @@
+mkdir -p build
 cd visualizer
-cargo build
-mkdir -p ../build
+cargo build --release
 cp target/debug/visualizer.exe ../build/.
 cp -r assets ../build/.
