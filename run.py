@@ -4,15 +4,16 @@ import pathlib
 import shutil
 import sys
 from envbuilder import EnvBuilder
+from pscheck import process_exists
 
 parser = argparse.ArgumentParser(description='Wrapper script running format converter, marching cube algorithm implementation'\
     + ' and output model visualizer.')
 parser.add_argument('input', type=pathlib.Path,
-    help='path to a PLY model containing voxel data in the point cloud format')
+    help='path to a PLY model containing voxel data in the point cloud format -OR- to a JSON file containing voxel data -OR- to an OBJ model file')
 parser.add_argument('--isomin', type=float, default=0.001,
-    help='lower bound for the density of voxels visualized as an isosurface')
+    help='lower bound for the density of voxels visualized as an isosurface (default: %(default)s)')
 parser.add_argument('--isomax', type=float, default=1.0,
-    help='upper bound for the density of voxels visualized as an isosurface')
+    help='upper bound for the density of voxels visualized as an isosurface (default: %(default)s)')
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -20,7 +21,8 @@ if __name__ == '__main__':
     env_builder.create('./.venv')
     env_builder.install_requirements('./marching-cubes/requirements.txt')
 
-    visualizer_binary = pathlib.Path('./build/visualizer.exe')
+    visualizer_pname = 'visualizer.exe'
+    visualizer_binary = pathlib.Path(f'./build/{visualizer_pname}')
     
     if not visualizer_binary.exists():
         print('Visualizer binary not found!', file=sys.stderr)
@@ -28,16 +30,29 @@ if __name__ == '__main__':
         exit(-1)
 
     model_path = str(args.input.absolute())
-    model_path_noext = os.path.splitext(model_path)[0]
+    model_path_noext, model_path_ext = os.path.splitext(model_path)
+    model_path_ext = model_path_ext[1:].lower()
 
-    print('Converting to internal JSON format...')
-    env_builder.run_module('marching-cubes.vox2json', [model_path])
+    if model_path_ext not in ['ply', 'json', 'obj']:
+        print(f'Unknown input file extension: {model_path_ext}', file=sys.stderr)
+        exit(-1)
 
-    print('Running the marching cubes algorithm...')
-    json_path = model_path_noext + '.json'
-    env_builder.run_module('marching-cubes.voxel_importer', [json_path, f'{args.isomax:f}', f'{args.isomin:f}'])
+    if model_path_ext in ['ply']:
+        print('Converting to internal JSON format...')
+        json_path = model_path_noext + '.json'
+        env_builder.run_module('marching-cubes.vox2json', [model_path, json_path])
+    else:
+        json_path = model_path
 
-    print('Running the visualizer...')
-    obj_path = model_path_noext + '.obj'
-    shutil.copyfile(obj_path, './build/assets/mesh.obj')
-    os.system(str(visualizer_binary.absolute()))
+    obj_path = str(pathlib.Path('./build/assets/mesh.obj').absolute())
+    if model_path_ext in ['ply', 'json']:
+        print('Running the marching cubes algorithm...')
+        env_builder.run_module('marching-cubes.voxel_importer',
+            [json_path, obj_path, '--isomax', f'{args.isomax:f}', '--isomin', f'{args.isomin:f}'])
+    else:
+        print('Ignoring --isomin and --isomax arguments...')
+        shutil.copyfile(model_path, obj_path)
+
+    if not process_exists(visualizer_pname):
+        print('Running the visualizer...')
+        os.system(f'start "" {str(visualizer_binary.absolute())}')
