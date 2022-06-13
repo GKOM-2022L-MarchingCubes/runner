@@ -19,15 +19,21 @@ if __name__ == '__main__':
     args = parser.parse_args()
     env_builder = EnvBuilder(with_pip=True)
     env_builder.create('./.venv')
-    env_builder.install_requirements('./marching-cubes/requirements.txt')
+    requirements_path = pathlib.Path('./marching-cubes/requirements.txt')
+    if requirements_path.exists():
+        env_builder.install_requirements(str(requirements_path.absolute()))
+        requirements_path.unlink()
 
     visualizer_pname = 'visualizer.exe'
     visualizer_binary = pathlib.Path(f'./build/{visualizer_pname}')
     
     if not visualizer_binary.exists():
-        print('Visualizer binary not found!', file=sys.stderr)
-        print('Use "build.sh" or place the binary with assets in "build" subdirectory.', file=sys.stderr)
-        exit(-1)
+        print('Building the visualizer...')
+        if os.system('cargo --help') != 0:
+            print('Missing build toolchain!', file=sys.stderr)
+            print('Place the binary with assets in "build" subdirectory manually.', file=sys.stderr)
+            exit(-1)
+        os.system('build.bat')
 
     model_path = str(args.input.absolute())
     model_path_noext, model_path_ext = os.path.splitext(model_path)
